@@ -622,7 +622,7 @@ function getDashboardUI(hasDB) {
   <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-      <title>Nahan Telemetry</title>
+      <title>Nahan Gateway</title>
       <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;900&display=swap" rel="stylesheet">
       <script src="https://cdn.tailwindcss.com"></script>
       <script>
@@ -1001,6 +1001,23 @@ function getDashboardUI(hasDB) {
       <div id="copy-toast" class="fixed top-20 md:top-10 left-1/2 -translate-x-1/2 bg-slate-800 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-full shadow-2xl font-bold text-sm z-50 transition-all transform -translate-y-20 opacity-0 pointer-events-none">
           <span data-i18n="copied">Copied!</span>
       </div>
+      
+      <!-- QR Code Modal (Enhanced) -->
+      <div id="qr-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+          <div class="bg-white dark:bg-darkcard rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-darkborder relative">
+              <button onclick="closeQRModal()" class="absolute top-4 end-4 text-slate-400 hover:text-slate-800 dark:hover:text-white">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+              <div class="text-center mb-6">
+                  <h3 id="qr-modal-title" class="text-xl font-bold text-slate-800 dark:text-white">Scan to Connect</h3>
+                  <p class="text-xs text-slate-500 mt-1">Scan with your V-Core or T-Core client</p>
+              </div>
+              <div class="bg-white p-4 rounded-2xl shadow-inner border border-slate-100 mb-4">
+                  <img id="qr-modal-img" src="" alt="QR Code" class="w-full aspect-square object-contain">
+              </div>
+              <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl break-all text-xs font-mono text-slate-600 dark:text-slate-400 max-h-24 overflow-auto border border-slate-200 dark:border-darkborder" id="qr-modal-link"></div>
+          </div>
+      </div>
   
       <script>
           const i18n = {
@@ -1118,6 +1135,19 @@ function getDashboardUI(hasDB) {
               toast.style.transform = 'translate(-50%, 0)'; toast.style.opacity = '1';
               setTimeout(() => { toast.style.transform = 'translate(-50%, -5rem)'; toast.style.opacity = '0'; }, 2000);
           }
+          
+          function showQR(name, url) {
+              document.getElementById('qr-modal-title').innerText = name;
+              document.getElementById('qr-modal-img').src = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(url);
+              document.getElementById('qr-modal-link').innerText = url;
+              document.getElementById('qr-modal').classList.remove('hidden');
+              document.getElementById('qr-modal').classList.add('flex');
+          }
+          
+          function closeQRModal() {
+              document.getElementById('qr-modal').classList.add('hidden');
+              document.getElementById('qr-modal').classList.remove('flex');
+          }
   
           function updateUI() {
               try {
@@ -1136,7 +1166,7 @@ function getDashboardUI(hasDB) {
                   if (document.getElementById('cfg-ech').checked) rawLink += "&pbk=enabled";
                   rawLink += "#" + hostName;
   
-                  // FIX: Check if elements exist before accessing properties
+                  // FIX: Check if elements exist
                   const linkEl = document.getElementById('link-direct');
                   if (linkEl) linkEl.value = rawLink;
   
@@ -1215,7 +1245,7 @@ function getDashboardUI(hasDB) {
           // Browser-level latency check diagnostics
           async function runPingTest() {
               const rawIps = document.getElementById('cfg-ips').value || "";
-              let ipsList = rawIps.replace(/,/g, '\\\\n').replace(/;/g, '\\\\n').split('\\\\n').map(s=>s.trim()).filter(Boolean);
+              let ipsList = rawIps.replace(/,/g, '\\n').replace(/;/g, '\\n').split('\\n').map(s=>s.trim()).filter(Boolean);
               let targetIP = ipsList.length > 0 ? ipsList[0] : (hostName.endsWith('.pages.dev') ? 'time.is' : hostName);
               
               const resultsDiv = document.getElementById('ping-results');
@@ -1301,7 +1331,7 @@ function getDashboardUI(hasDB) {
                       pCont.innerHTML = '';
                       data.profiles.forEach(p => {
                           const isDef = p.name === 'Default';
-                          let html = \`<div class="bg-white dark:bg-darkcard rounded-3xl p-5 md:p-8 shadow-sm border border-slate-200 dark:border-darkborder relative overflow-hidden">
+                          let html = \`<div class="bg-white dark:bg-darkcard rounded-3xl p-5 md:p-6 shadow-sm border border-slate-200 dark:border-darkborder relative overflow-hidden">
                               <div class="absolute top-0 end-0 w-32 h-32 bg-primary/5 rounded-bl-[100px] -z-10"></div>
                               <div class="flex items-center justify-between mb-4">
                                   <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center">
@@ -1320,6 +1350,11 @@ function getDashboardUI(hasDB) {
                                       <input type="text" id="sync-\${p.id}" readonly value="\${p.sync}" class="w-full bg-slate-50 dark:bg-darkbg border border-slate-200 dark:border-darkborder px-4 py-3 rounded-xl text-sm outline-none font-mono text-slate-600 dark:text-slate-400 truncate pe-12">
                                       <button onclick="copyData('sync-\${p.id}')" class="absolute bottom-1 end-1 text-primary p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
                                   </div>
+                                  <!-- QR Code Button Enhanced -->
+                                  <button onclick="showQR('\${p.name}', document.getElementById('sync-\${p.id}').value)" class="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl transition-colors text-sm">
+                                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                                      Show QR Code
+                                  </button>
                               </div>
                           </div>\`;
                           pCont.innerHTML += html;
